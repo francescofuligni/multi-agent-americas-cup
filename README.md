@@ -1,4 +1,4 @@
-# 🏆 CoppaAmerica Multi-Agent Reinforcement Learning Simulator
+# 🏆 America's Cup Multi-Agent Reinforcement Learning Simulator
 
 An advanced two-dimensional sailing simulator inspired by the **America's Cup**, where two autonomous boats learn continuous rudder and sail control to compete in a tactical match race.
 
