@@ -1,127 +1,128 @@
 # 🏆 CoppaAmerica Multi-Agent Reinforcement Learning Simulator
 
-Un simulatore bidimensionale avanzato di regate veliche sul modello dell'**America's Cup**, in cui due imbarcazioni autonome apprendono il controllo continuo di timone e vele per competere in un match race tattico. 
+An advanced two-dimensional sailing simulator inspired by the **America's Cup**, where two autonomous boats learn continuous rudder and sail control to compete in a tactical match race.
 
-Il sistema è basato su **Multi-Agent Reinforcement Learning (MARL)** ed è implementato come ambiente PettingZoo parallelo, addestrato con l'algoritmo **PPO (Proximal Policy Optimization)** tramite Stable-Baselines3 e SuperSuit.
-
----
-
-## 📖 Descrizione del Programma
-
-Il simulatore riproduce una sfida ravvicinata (match race) tra due barche identiche, denominate `red_boat` e `blue_boat`. Per vincere, gli agenti devono navigare in un campo di regata stocastico rispettando la fisica della vela, le polari di velocità dell'imbarcazione e le regole di precedenza della regata reale.
-
-### ⚓ Struttura della Regata (Leg)
-
-La gara è organizzata in fasi sequenziali controllate dallo stato interno degli agenti (`current_leg`):
-
-1. **Fase 0: Pre-Partenza (Pre-start) & Line Crossing**: Le barche vengono generate al di sotto del cancello di partenza ($Y \approx 120$m). Devono allinearsi e tagliare la linea del **Bottom Gate** ($Y = 200$m) entro lo spazio delle boe. Tagliare in anticipo o mancare il cancello comporta la squalifica immediata.
-2. **Leg 1: Bolina (Upwind)**: Le barche devono risalire il vento in direzione Nord verso il **Top Gate** ($Y = 3900$m). Poiché una barca a vela non può navigare direttamente controvento (angolo morto), gli agenti devono apprendere la tattica dei bordi (bordeggiare) massimizzando la *Velocity Made Good (VMG)*.
-3. **Leg 1.5: Rounding (Giro di Boa)**: Una volta superato il cancello superiore, gli agenti devono eseguire una manovra di giro attorno a una delle boe esterne (Boa di Sinistra o Boa di Dritta) per orientare la prua verso Sud.
-4. **Leg 2: Poppa (Downwind)**: Gli agenti navigano con il vento a favore per raggiungere il traguardo al **Bottom Gate** ($Y = 200$m). La regata si conclude non appena la prima barca attraversa con successo il cancello finale.
-
-### ⛵ Fisica del Simulatore e Dinamiche Ambientali
-
-Il cuore simulativo implementa modelli derivati da barche da regata reali ad alte prestazioni:
-
-* **Curve Polari (VPP)**: La velocità massima teorica dipende dall'angolo del vento reale (TWA) e dalla sua intensità. Il simulatore calcola le polari dinamicamente distinguendo tra due modalità di navigazione: **Dislocamento** (barca in acqua, più lenta ma angoli di bolina più stretti) e **Foiling** (barca che vola sui foil, estremamente veloce ma con un angolo morto al vento più ampio).
-* **Meccanica del Foiling**: Il decollo sui foil avviene quando la velocità supera i **18 nodi**; la barca ricade in acqua (displacement) se la velocità scende sotto i **15 nodi**. Le transizioni includono penalità transitorie e considerano l'inerzia dello stato ($I_F = 0.98$, $I_D = 0.85$).
-* **Trim delle Vele**: L'efficienza aerodinamica delle vele è modellata con una campana gaussiana centrata sul trim ottimale per lo specifico angolo di andatura. Gli agenti controllano il trim delle vele in modo continuo.
-* **Campo di Vento Spazio-Temporale**: Il vento non è costante. È composto da un vento base che varia nel tempo tramite *Random Walk* (da 15 a 22 nodi) e da una griglia spaziale perturbata $10 \times 10$ che modella la nascita, evoluzione e smorzamento di raffiche e salti di vento locali tramite processi stocastici *mean-reverting*.
-* **Collisioni & Regole di Precedenza (Rule 10)**: Le imbarcazioni hanno un raggio fisico di ingombro di 20 metri e un'area di rispetto di 40 metri. Oltre a calcolare penalità predittive basate sul tempo stimato all'impatto (*Time-To-Collision - TTC*), il simulatore punisce severamente chi viola le regole di precedenza sulle mure opposte (il port-tack boat, ossia chi naviga con vento da sinistra, riceve una penalità moltiplicata di $1.6$ o la squalifica immediata in caso di scontro violento).
+The system is based on **Multi-Agent Reinforcement Learning (MARL)** and is implemented as a parallel PettingZoo environment, trained with the **PPO (Proximal Policy Optimization)** algorithm using Stable-Baselines3 and SuperSuit.
 
 ---
 
-## 📂 Struttura del Progetto
+## 📖 Program Overview
 
-```
+The simulator recreates a close match race between two identical boats, named `red_boat` and `blue_boat`. To win, the agents must navigate a stochastic racecourse while respecting sailing physics, the boats' velocity polar diagrams, and real-world right-of-way rules.
+
+### ⚓ Race Structure (Legs)
+
+The race is organized into sequential stages controlled by the agents' internal state (`current_leg`):
+
+1. **Stage 0: Pre-start & Line Crossing**: Boats spawn below the starting gate ($Y \approx 120$m). They must line up and cross the **Bottom Gate** ($Y = 200$m) between the marks. Crossing too early or missing the gate results in immediate disqualification.
+2. **Leg 1: Upwind**: Boats sail north toward the **Top Gate** ($Y = 3900$m). Since a sailboat cannot sail directly into the wind (the no-go zone), agents must learn to tack while maximizing *Velocity Made Good (VMG)*.
+3. **Leg 1.5: Mark Rounding**: After passing the top gate, agents must round one of the outer marks (port or starboard) to turn the bow south.
+4. **Leg 2: Downwind**: Agents sail with the wind toward the finish at the **Bottom Gate** ($Y = 200$m). The race ends as soon as the first boat successfully crosses the final gate.
+
+### ⛵ Simulator Physics and Environmental Dynamics
+
+The simulation core implements models derived from high-performance racing boats:
+
+* **Velocity Polar Diagrams (VPP)**: The theoretical maximum speed depends on the true wind angle (TWA) and wind strength. The simulator dynamically calculates polar diagrams for two sailing modes: **Displacement** (the boat is in the water, slower but able to sail closer to the wind) and **Foiling** (the boat flies on its hydrofoils, much faster but with a wider no-go zone).
+* **Foiling Mechanics**: The boat takes off onto its foils when its speed exceeds **18 knots** and returns to displacement mode if speed falls below **15 knots**. Transitions include temporary penalties and account for state inertia ($I_F = 0.98$, $I_D = 0.85$).
+* **Sail Trim**: Sail aerodynamic efficiency is modeled by a Gaussian curve centered on the optimal trim for the current point of sail. Agents control sail trim continuously.
+* **Spatiotemporal Wind Field**: Wind is not constant. A base wind varies over time through a *random walk* (from 15 to 22 knots), alongside a perturbed $10 \times 10$ spatial grid that models the creation, evolution, and decay of local gusts and wind shifts using stochastic *mean-reverting* processes.
+* **Collisions & Right-of-Way Rules (Rule 10)**: Boats have a physical collision radius of 20 meters and a safety zone of 40 meters. The simulator calculates predictive penalties based on *Time-To-Collision (TTC)* and heavily penalizes violations of right-of-way on opposite tacks. The port-tack boat (sailing with the wind coming from its left) receives a 1.6× penalty multiplier or immediate disqualification in the event of a severe collision.
+
+---
+
+## 📂 Project Structure
+
+```text
 Multi-agent_America_Cup/
-├── core/                   # Modello fisico e dinamiche ambientali
-│   ├── boat_physics.py     # Calcolo velocità polari, VMG e aggiornamenti cinematici
-│   ├── sail_trim.py        # Ottimizzazione del trim delle vele e calcolo efficienza
-│   └── wind_model.py       # Griglia spaziale e random walk del vento stocastico
-├── env/                    # Definizione dell'ambiente in stile Gymnasium/PettingZoo
-│   ├── sailing_env.py      # Gestione stati, logica dei leg, reward e collisioni
-│   └── rendering.py        # Modulo grafico per la visualizzazione dell'ambiente
-├── report/                 # Report accademico in LaTeX
-│   ├── report.tex          # File sorgente del report (con la teoria dettagliata)
-│   └── report.pdf          # File compilato pronto per la lettura
-├── images/                 # Grafici ed asset grafici per il report ed il readme
-├── videos/                 # Directory di output per le simulazioni renderizzate in MP4
-├── config.yaml             # Parametri di simulazione e iperparametri RL
-├── main.py                 # CLI principale per orchestrare train, test e video
-├── train_ppo.py            # Routine di addestramento parallelizzata con PPO
-├── evaluate_ppo.py         # Script di valutazione e rendering traiettorie
-├── callbacks.py            # Log delle metriche personalizzate e checkpointing
-└── requirements.txt        # Dipendenze Python del progetto
+├── core/                   # Physics model and environmental dynamics
+│   ├── boat_physics.py     # Polar speed, VMG, and kinematic updates
+│   ├── sail_trim.py        # Sail-trim optimization and efficiency calculation
+│   └── wind_model.py       # Spatial grid and stochastic wind random walk
+├── env/                    # Gymnasium/PettingZoo-style environment
+│   ├── sailing_env.py      # State management, leg logic, rewards, and collisions
+│   └── rendering.py        # Environment visualization
+├── report/                 # Academic report in LaTeX
+│   ├── report.tex          # Report source with detailed theory
+│   └── report.pdf          # Compiled report
+├── images/                 # Charts and visual assets for the report and README
+├── videos/                 # Output directory for rendered MP4 simulations
+├── config.yaml             # Simulation parameters and RL hyperparameters
+├── main.py                 # Main CLI for training, testing, and video generation
+├── train_ppo.py            # Parallelized PPO training routine
+├── evaluate_ppo.py         # Policy evaluation and trajectory rendering
+├── callbacks.py            # Custom metrics logging and checkpointing
+└── requirements.txt        # Project dependencies
 ```
 
 ---
 
-## 🚀 Istruzioni per l'Uso
+## 🚀 How to Use
 
-### 🛠️ Setup Ambiente
+### 🛠️ Environment Setup
 
-1. Creare ed attivare l'ambiente virtuale:
+1. Create and activate a virtual environment:
    ```bash
    python3 -m venv .venv
-   source .venv/bin/activate  # Per macOS/Linux
-   # .venv\Scripts\activate   # Per Windows
+   source .venv/bin/activate  # macOS/Linux
+   # .venv\Scripts\activate   # Windows
    ```
-2. Installare le dipendenze:
+2. Install the dependencies:
    ```bash
    pip install --upgrade pip
    pip install -r requirements.txt
    ```
-   *Nota: Per abilitare il salvataggio dei video in MP4, assicurarsi di installare il pacchetto FFmpeg sul proprio sistema operativo.*
+   *Note: To save videos as MP4 files, make sure FFmpeg is installed on your operating system.*
 
-### 🧠 Addestramento dei Modelli (Training)
+### 🧠 Model Training
 
-L'allenamento sfrutta 16 processi paralleli (configurabili) per accumulare campioni rapidamente ed utilizza il meccanismo di *Self-Play* in PettingZoo. La CLI gestisce automaticamente le versioni dei modelli salvandole progressivamente in `models/`.
+Training uses 16 configurable parallel processes to collect samples efficiently and relies on PettingZoo's *self-play* mechanism. The CLI automatically saves successive model versions in `models/`.
 
 ```bash
-# Avvia un nuovo addestramento da zero (sovrascrive checkpoint provvisori precedenti)
+# Start a new training run from scratch (overwrites previous temporary checkpoints)
 python main.py --train-new
 
-# Riprende l'addestramento dell'ultimo modello salvato
+# Resume training from the latest saved model
 python main.py --train-resume
 
-# Avvia l'addestramento con parametri personalizzati da terminale
+# Start training with custom command-line parameters
 python main.py --train-new --steps 2000000 --n-envs 16 --model-name sailing_model
 ```
 
-### 📺 Valutazione e Rendering Video (Testing)
+### 📺 Evaluation and Video Rendering
 
-È possibile testare le performance della policy addestrata facendola gareggiare in simulazione e registrando l'episodio in un file MP4:
+Evaluate a trained policy by racing it in the simulator and recording the episode to an MP4 file:
 
 ```bash
-# Esegue un singolo episodio di test e lo esporta come video demo
+# Run one test episode and export it as a demo video
 python main.py --video-file videos/sailing_demo.mp4
 
-# Genera una suite di test composta da 5 regate differenti con seed stocastici diversi
+# Run a test suite of five races with different stochastic seeds
 python main.py --test-multi
 ```
 
-### 📊 Monitoraggio in TensorBoard
+### 📊 TensorBoard Monitoring
 
-La classe `SuccessTrackingCallback` definita in `callbacks.py` registra costantemente le metriche personalizzate di performance (rapporto completamento leg, velocità di bolina, efficienza media del trim, penalità medie per collisioni e andamento delle singole tipologie di fallimento/squalifica).
+The `SuccessTrackingCallback` class in `callbacks.py` continuously records custom performance metrics, including leg completion rate, upwind speed, average sail-trim efficiency, average collision penalties, and counts for each type of failure or disqualification.
 
-Per ispezionare l'andamento del training:
+To inspect training progress:
+
 ```bash
 tensorboard --logdir ./sailing_tensorboard/
 ```
 
 ---
 
-## 🔬 Dettagli di Configurazione
+## 🔬 Configuration Details
 
-I parametri fisici ed algoritmici sono controllati centralmente nel file [config.yaml](file:///Users/francescomariafuligni/Desktop/UNI/magistrale_1_anno/1_semestre/INTELLIGENZA_ARTIFICIALE/Progetto/Multi-agent_America_Cup/config.yaml). Di seguito gli iperparametri principali:
+Physical and algorithmic parameters are managed centrally in [config.yaml](config.yaml). The main hyperparameters are:
 
-| Iperparametro | Valore | Descrizione |
+| Hyperparameter | Value | Description |
 | :--- | :---: | :--- |
-| `learning_rate` | $2\times 10^{-4}$ | Tasso di apprendimento per l'ottimizzatore Adam |
-| `n_steps` | $4096$ | Numero di passi per ambiente prima di effettuare un aggiornamento PPO |
-| `batch_size` | $1024$ | Dimensione del minibatch per il gradiente |
-| `net_arch` | `[256, 256]` | Rete MLP a due strati per policy ($\pi$) e value function ($V$) |
-| `frame_stack` | $4$ | Stacking dei frame per catturare l'evoluzione temporale di vento e avversario |
-| `success_threshold_pct`| $0.95$ | Percentuale minima di arrivi completati richiesta per l'arresto anticipato |
-| `success_window_size` | $100$ | Numero di episodi su cui calcolare la percentuale di successo |
+| `learning_rate` | $2\times 10^{-4}$ | Learning rate for the Adam optimizer |
+| `n_steps` | $4096$ | Steps per environment before each PPO update |
+| `batch_size` | $1024$ | Minibatch size for gradient updates |
+| `net_arch` | `[256, 256]` | Two-layer MLP for the policy ($\pi$) and value function ($V$) |
+| `frame_stack` | $4$ | Number of stacked frames to capture changes in wind and opponent state |
+| `success_threshold_pct` | $0.95$ | Minimum completion rate required to trigger early stopping |
+| `success_window_size` | $100$ | Number of episodes used to calculate the success rate |
